@@ -70,7 +70,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - design/logo-final/yomipeek-icon-1024.png
+    - assets/branding/yomipeek-icon-1024.png
     - assets/fonts/noto-sans-jp/OFL.txt
     - assets/fonts/noto-serif-jp/OFL.txt
     - assets/fonts/zen-maru-gothic/OFL.txt

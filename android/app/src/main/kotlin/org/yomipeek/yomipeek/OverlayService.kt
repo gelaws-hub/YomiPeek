@@ -196,8 +196,8 @@ class OverlayService: Service() {
     }
     private fun showBubble() {
         if (bubble != null || hostVisible) return
-        val row = LinearLayout(this).apply { background = background(Color.rgb(40, 95, 83), 28); elevation = dp(6).toFloat(); setPadding(dp(4), dp(4), dp(4), dp(4)) }
-        val open = iconButton(R.drawable.yomipeek_icon, "Open YomiPeek floating lookup", true) { showPanel("") }.apply { imageTintList = null; setPadding(0, 0, 0, 0); scaleType = ImageView.ScaleType.FIT_CENTER; background = null }
+        val row = LinearLayout(this).apply { background = null; elevation = 0f; setPadding(0, 0, 0, 0) }
+        val open = iconButton(R.drawable.yomipeek_mark, "Open YomiPeek floating lookup", true) { showPanel("") }.apply { imageTintList = null; setPadding(0, 0, 0, 0); scaleType = ImageView.ScaleType.FIT_CENTER; background = background(Color.rgb(40, 95, 83), 24) }
         open.tooltipText = "Tap to search · hold to dismiss shortcut"
         open.setOnLongClickListener { setShortcut(this, false); stopSelf(); true }
         row.addView(open, LinearLayout.LayoutParams(dp(48), dp(48)))
@@ -228,7 +228,7 @@ class OverlayService: Service() {
         val layout = params(width, height)
         panelParams = layout
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        header.addView(ImageView(this).apply { setImageResource(R.drawable.yomipeek_icon); scaleType = ImageView.ScaleType.FIT_CENTER }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(6) })
+        header.addView(ImageView(this).apply { setImageResource(R.drawable.yomipeek_mark); scaleType = ImageView.ScaleType.FIT_CENTER; background = background(Color.rgb(40, 95, 83), 14); setPadding(dp(2), dp(2), dp(2), dp(2)) }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(6) })
         backButton = iconButton(R.drawable.ic_lookup_back, "Back to previous word") {
             if (!browsingHistory.isEmpty()) { val previous = browsingHistory.removeLast(); sourceText = previous.second; query?.setText(previous.first); backButton?.visibility = if (browsingHistory.isEmpty()) View.GONE else View.VISIBLE }
         }

@@ -148,7 +148,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       leading: Padding(
         padding: const EdgeInsets.all(10),
         child: Image.asset(
-          'design/logo-final/yomipeek-icon-1024.png',
+          'assets/branding/yomipeek-icon-1024.png',
           semanticLabel: 'YomiPeek logo',
         ),
       ),
@@ -373,7 +373,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Image.asset(
-                              'design/logo-final/yomipeek-icon-1024.png',
+                              'assets/branding/yomipeek-icon-1024.png',
                               width: 72,
                               height: 72,
                               semanticLabel: 'YomiPeek logo',
