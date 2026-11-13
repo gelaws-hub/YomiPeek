@@ -14,8 +14,10 @@ class FloatingState {
     this.available = false,
     this.permission = false,
     this.shortcut = false,
+    this.theme = 'system',
   });
   final bool available, permission, shortcut;
+  final String theme;
 }
 
 class AndroidGateway {
@@ -49,9 +51,18 @@ class AndroidGateway {
         available: true,
         permission: value?['permission'] == true,
         shortcut: value?['shortcut'] == true,
+        theme: value?['theme'] as String? ?? 'system',
       );
     } on MissingPluginException {
       return const FloatingState();
+    }
+  }
+
+  Future<void> setTheme(String mode) async {
+    try {
+      await _channel.invokeMethod('setTheme', mode);
+    } on MissingPluginException {
+      /* Non-Android host. */
     }
   }
 

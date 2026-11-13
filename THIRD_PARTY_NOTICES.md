@@ -4,3 +4,6 @@ YomiPeek uses Flutter/Dart and packages resolved in pubspec.lock, including Rive
 
 
 Development validation used the externally downloaded JMdict English Yomitan release dated 2026-11-11. JMdict is provided by the Electronic Dictionary Research and Development Group (EDRDG), under [CC BY-SA 4.0 and the EDRDG attribution requirements](https://www.edrdg.org/edrdg/licence.html). Copyright and attribution remain with the original contributors, including James William Breen and EDRDG. No dictionary archive or database is distributed with YomiPeek. Development screenshots contain limited example results with the source identified; the application MIT license does not relicense dictionary content.
+
+
+Further external development validation used the official JMdict English with examples and KANJIDIC English archives from the 2026-11-11 release. Original index attribution is retained and displayed by the application. Example sentences retain their respective contributor/source rights; the application license does not apply to imported example text. No third-party dictionary archive, generated dictionary database or asset is included in the application.

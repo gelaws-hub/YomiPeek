@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
@@ -32,6 +33,12 @@ Future<void> startOverlayBridge() async {
                 'source': r.source,
                 'tags': r.term.tags,
                 'inflection': r.inflection.join(' → '),
+                'parameters': r.term.rawEntry.isEmpty
+                    ? r.term.rules
+                    : entryParameters(r.term.rawEntry),
+                'references': r.term.rawEntry.isEmpty
+                    ? <String>[]
+                    : entryReferences(jsonDecode(r.term.rawEntry)),
               },
             )
             .toList();
@@ -69,4 +76,26 @@ Future<void> startOverlayBridge() async {
     }
   });
   await channel.invokeMethod<void>('ready');
+}
+
+String entryParameters(String raw) {
+  final row = jsonDecode(raw) as List;
+  return 'Rules: ${row[3]} · Score: ${row[4]} · Sequence: ${row[6]}';
+}
+
+List<String> entryReferences(dynamic node, [int depth = 0]) {
+  if (depth > 32) return [];
+  if (node is List) {
+    return node.expand((v) => entryReferences(v, depth + 1)).toList();
+  }
+  if (node is Map) {
+    final uri = node['href'] is String
+        ? Uri.tryParse(node['href'] as String)
+        : null;
+    return [
+      if (uri?.queryParameters['query'] != null) uri!.queryParameters['query']!,
+      ...entryReferences(node['content'], depth + 1),
+    ];
+  }
+  return [];
 }

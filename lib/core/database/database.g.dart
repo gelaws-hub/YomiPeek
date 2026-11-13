@@ -506,6 +506,18 @@ class $TermsTable extends Terms with TableInfo<$TermsTable, Term> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $TermsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _rawEntryMeta = const VerificationMeta(
+    'rawEntry',
+  );
+  @override
+  late final GeneratedColumn<String> rawEntry = GeneratedColumn<String>(
+    'raw_entry',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -609,6 +621,7 @@ class $TermsTable extends Terms with TableInfo<$TermsTable, Term> {
   );
   @override
   List<GeneratedColumn> get $columns => [
+    rawEntry,
     id,
     dictionaryId,
     expression,
@@ -631,6 +644,12 @@ class $TermsTable extends Terms with TableInfo<$TermsTable, Term> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('raw_entry')) {
+      context.handle(
+        _rawEntryMeta,
+        rawEntry.isAcceptableOrUnknown(data['raw_entry']!, _rawEntryMeta),
+      );
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
@@ -716,6 +735,10 @@ class $TermsTable extends Terms with TableInfo<$TermsTable, Term> {
   Term map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Term(
+      rawEntry: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_entry'],
+      )!,
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
@@ -762,6 +785,7 @@ class $TermsTable extends Terms with TableInfo<$TermsTable, Term> {
 }
 
 class Term extends DataClass implements Insertable<Term> {
+  final String rawEntry;
   final int id;
   final int dictionaryId;
   final String expression;
@@ -772,6 +796,7 @@ class Term extends DataClass implements Insertable<Term> {
   final String tags;
   final String rules;
   const Term({
+    required this.rawEntry,
     required this.id,
     required this.dictionaryId,
     required this.expression,
@@ -785,6 +810,7 @@ class Term extends DataClass implements Insertable<Term> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['raw_entry'] = Variable<String>(rawEntry);
     map['id'] = Variable<int>(id);
     map['dictionary_id'] = Variable<int>(dictionaryId);
     map['expression'] = Variable<String>(expression);
@@ -799,6 +825,7 @@ class Term extends DataClass implements Insertable<Term> {
 
   TermsCompanion toCompanion(bool nullToAbsent) {
     return TermsCompanion(
+      rawEntry: Value(rawEntry),
       id: Value(id),
       dictionaryId: Value(dictionaryId),
       expression: Value(expression),
@@ -817,6 +844,7 @@ class Term extends DataClass implements Insertable<Term> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Term(
+      rawEntry: serializer.fromJson<String>(json['rawEntry']),
       id: serializer.fromJson<int>(json['id']),
       dictionaryId: serializer.fromJson<int>(json['dictionaryId']),
       expression: serializer.fromJson<String>(json['expression']),
@@ -832,6 +860,7 @@ class Term extends DataClass implements Insertable<Term> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'rawEntry': serializer.toJson<String>(rawEntry),
       'id': serializer.toJson<int>(id),
       'dictionaryId': serializer.toJson<int>(dictionaryId),
       'expression': serializer.toJson<String>(expression),
@@ -845,6 +874,7 @@ class Term extends DataClass implements Insertable<Term> {
   }
 
   Term copyWith({
+    String? rawEntry,
     int? id,
     int? dictionaryId,
     String? expression,
@@ -855,6 +885,7 @@ class Term extends DataClass implements Insertable<Term> {
     String? tags,
     String? rules,
   }) => Term(
+    rawEntry: rawEntry ?? this.rawEntry,
     id: id ?? this.id,
     dictionaryId: dictionaryId ?? this.dictionaryId,
     expression: expression ?? this.expression,
@@ -867,6 +898,7 @@ class Term extends DataClass implements Insertable<Term> {
   );
   Term copyWithCompanion(TermsCompanion data) {
     return Term(
+      rawEntry: data.rawEntry.present ? data.rawEntry.value : this.rawEntry,
       id: data.id.present ? data.id.value : this.id,
       dictionaryId: data.dictionaryId.present
           ? data.dictionaryId.value
@@ -892,6 +924,7 @@ class Term extends DataClass implements Insertable<Term> {
   @override
   String toString() {
     return (StringBuffer('Term(')
+          ..write('rawEntry: $rawEntry, ')
           ..write('id: $id, ')
           ..write('dictionaryId: $dictionaryId, ')
           ..write('expression: $expression, ')
@@ -907,6 +940,7 @@ class Term extends DataClass implements Insertable<Term> {
 
   @override
   int get hashCode => Object.hash(
+    rawEntry,
     id,
     dictionaryId,
     expression,
@@ -921,6 +955,7 @@ class Term extends DataClass implements Insertable<Term> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Term &&
+          other.rawEntry == this.rawEntry &&
           other.id == this.id &&
           other.dictionaryId == this.dictionaryId &&
           other.expression == this.expression &&
@@ -933,6 +968,7 @@ class Term extends DataClass implements Insertable<Term> {
 }
 
 class TermsCompanion extends UpdateCompanion<Term> {
+  final Value<String> rawEntry;
   final Value<int> id;
   final Value<int> dictionaryId;
   final Value<String> expression;
@@ -943,6 +979,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
   final Value<String> tags;
   final Value<String> rules;
   const TermsCompanion({
+    this.rawEntry = const Value.absent(),
     this.id = const Value.absent(),
     this.dictionaryId = const Value.absent(),
     this.expression = const Value.absent(),
@@ -954,6 +991,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
     this.rules = const Value.absent(),
   });
   TermsCompanion.insert({
+    this.rawEntry = const Value.absent(),
     this.id = const Value.absent(),
     required int dictionaryId,
     required String expression,
@@ -972,6 +1010,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
        tags = Value(tags),
        rules = Value(rules);
   static Insertable<Term> custom({
+    Expression<String>? rawEntry,
     Expression<int>? id,
     Expression<int>? dictionaryId,
     Expression<String>? expression,
@@ -983,6 +1022,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
     Expression<String>? rules,
   }) {
     return RawValuesInsertable({
+      if (rawEntry != null) 'raw_entry': rawEntry,
       if (id != null) 'id': id,
       if (dictionaryId != null) 'dictionary_id': dictionaryId,
       if (expression != null) 'expression': expression,
@@ -996,6 +1036,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
   }
 
   TermsCompanion copyWith({
+    Value<String>? rawEntry,
     Value<int>? id,
     Value<int>? dictionaryId,
     Value<String>? expression,
@@ -1007,6 +1048,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
     Value<String>? rules,
   }) {
     return TermsCompanion(
+      rawEntry: rawEntry ?? this.rawEntry,
       id: id ?? this.id,
       dictionaryId: dictionaryId ?? this.dictionaryId,
       expression: expression ?? this.expression,
@@ -1022,6 +1064,9 @@ class TermsCompanion extends UpdateCompanion<Term> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (rawEntry.present) {
+      map['raw_entry'] = Variable<String>(rawEntry.value);
+    }
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
@@ -1055,6 +1100,7 @@ class TermsCompanion extends UpdateCompanion<Term> {
   @override
   String toString() {
     return (StringBuffer('TermsCompanion(')
+          ..write('rawEntry: $rawEntry, ')
           ..write('id: $id, ')
           ..write('dictionaryId: $dictionaryId, ')
           ..write('expression: $expression, ')
@@ -1069,16 +1115,381 @@ class TermsCompanion extends UpdateCompanion<Term> {
   }
 }
 
+class $EntryExtrasTable extends EntryExtras
+    with TableInfo<$EntryExtrasTable, EntryExtra> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntryExtrasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _dictionaryIdMeta = const VerificationMeta(
+    'dictionaryId',
+  );
+  @override
+  late final GeneratedColumn<int> dictionaryId = GeneratedColumn<int>(
+    'dictionary_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES dictionaries (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _expressionMeta = const VerificationMeta(
+    'expression',
+  );
+  @override
+  late final GeneratedColumn<String> expression = GeneratedColumn<String>(
+    'expression',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modeMeta = const VerificationMeta('mode');
+  @override
+  late final GeneratedColumn<String> mode = GeneratedColumn<String>(
+    'mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    dictionaryId,
+    expression,
+    mode,
+    payload,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entry_extras';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EntryExtra> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('dictionary_id')) {
+      context.handle(
+        _dictionaryIdMeta,
+        dictionaryId.isAcceptableOrUnknown(
+          data['dictionary_id']!,
+          _dictionaryIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_dictionaryIdMeta);
+    }
+    if (data.containsKey('expression')) {
+      context.handle(
+        _expressionMeta,
+        expression.isAcceptableOrUnknown(data['expression']!, _expressionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expressionMeta);
+    }
+    if (data.containsKey('mode')) {
+      context.handle(
+        _modeMeta,
+        mode.isAcceptableOrUnknown(data['mode']!, _modeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_modeMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  EntryExtra map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EntryExtra(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      dictionaryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dictionary_id'],
+      )!,
+      expression: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}expression'],
+      )!,
+      mode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mode'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+    );
+  }
+
+  @override
+  $EntryExtrasTable createAlias(String alias) {
+    return $EntryExtrasTable(attachedDatabase, alias);
+  }
+}
+
+class EntryExtra extends DataClass implements Insertable<EntryExtra> {
+  final int id;
+  final int dictionaryId;
+  final String expression;
+  final String mode;
+  final String payload;
+  const EntryExtra({
+    required this.id,
+    required this.dictionaryId,
+    required this.expression,
+    required this.mode,
+    required this.payload,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['dictionary_id'] = Variable<int>(dictionaryId);
+    map['expression'] = Variable<String>(expression);
+    map['mode'] = Variable<String>(mode);
+    map['payload'] = Variable<String>(payload);
+    return map;
+  }
+
+  EntryExtrasCompanion toCompanion(bool nullToAbsent) {
+    return EntryExtrasCompanion(
+      id: Value(id),
+      dictionaryId: Value(dictionaryId),
+      expression: Value(expression),
+      mode: Value(mode),
+      payload: Value(payload),
+    );
+  }
+
+  factory EntryExtra.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EntryExtra(
+      id: serializer.fromJson<int>(json['id']),
+      dictionaryId: serializer.fromJson<int>(json['dictionaryId']),
+      expression: serializer.fromJson<String>(json['expression']),
+      mode: serializer.fromJson<String>(json['mode']),
+      payload: serializer.fromJson<String>(json['payload']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'dictionaryId': serializer.toJson<int>(dictionaryId),
+      'expression': serializer.toJson<String>(expression),
+      'mode': serializer.toJson<String>(mode),
+      'payload': serializer.toJson<String>(payload),
+    };
+  }
+
+  EntryExtra copyWith({
+    int? id,
+    int? dictionaryId,
+    String? expression,
+    String? mode,
+    String? payload,
+  }) => EntryExtra(
+    id: id ?? this.id,
+    dictionaryId: dictionaryId ?? this.dictionaryId,
+    expression: expression ?? this.expression,
+    mode: mode ?? this.mode,
+    payload: payload ?? this.payload,
+  );
+  EntryExtra copyWithCompanion(EntryExtrasCompanion data) {
+    return EntryExtra(
+      id: data.id.present ? data.id.value : this.id,
+      dictionaryId: data.dictionaryId.present
+          ? data.dictionaryId.value
+          : this.dictionaryId,
+      expression: data.expression.present
+          ? data.expression.value
+          : this.expression,
+      mode: data.mode.present ? data.mode.value : this.mode,
+      payload: data.payload.present ? data.payload.value : this.payload,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntryExtra(')
+          ..write('id: $id, ')
+          ..write('dictionaryId: $dictionaryId, ')
+          ..write('expression: $expression, ')
+          ..write('mode: $mode, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, dictionaryId, expression, mode, payload);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EntryExtra &&
+          other.id == this.id &&
+          other.dictionaryId == this.dictionaryId &&
+          other.expression == this.expression &&
+          other.mode == this.mode &&
+          other.payload == this.payload);
+}
+
+class EntryExtrasCompanion extends UpdateCompanion<EntryExtra> {
+  final Value<int> id;
+  final Value<int> dictionaryId;
+  final Value<String> expression;
+  final Value<String> mode;
+  final Value<String> payload;
+  const EntryExtrasCompanion({
+    this.id = const Value.absent(),
+    this.dictionaryId = const Value.absent(),
+    this.expression = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.payload = const Value.absent(),
+  });
+  EntryExtrasCompanion.insert({
+    this.id = const Value.absent(),
+    required int dictionaryId,
+    required String expression,
+    required String mode,
+    required String payload,
+  }) : dictionaryId = Value(dictionaryId),
+       expression = Value(expression),
+       mode = Value(mode),
+       payload = Value(payload);
+  static Insertable<EntryExtra> custom({
+    Expression<int>? id,
+    Expression<int>? dictionaryId,
+    Expression<String>? expression,
+    Expression<String>? mode,
+    Expression<String>? payload,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (dictionaryId != null) 'dictionary_id': dictionaryId,
+      if (expression != null) 'expression': expression,
+      if (mode != null) 'mode': mode,
+      if (payload != null) 'payload': payload,
+    });
+  }
+
+  EntryExtrasCompanion copyWith({
+    Value<int>? id,
+    Value<int>? dictionaryId,
+    Value<String>? expression,
+    Value<String>? mode,
+    Value<String>? payload,
+  }) {
+    return EntryExtrasCompanion(
+      id: id ?? this.id,
+      dictionaryId: dictionaryId ?? this.dictionaryId,
+      expression: expression ?? this.expression,
+      mode: mode ?? this.mode,
+      payload: payload ?? this.payload,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (dictionaryId.present) {
+      map['dictionary_id'] = Variable<int>(dictionaryId.value);
+    }
+    if (expression.present) {
+      map['expression'] = Variable<String>(expression.value);
+    }
+    if (mode.present) {
+      map['mode'] = Variable<String>(mode.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntryExtrasCompanion(')
+          ..write('id: $id, ')
+          ..write('dictionaryId: $dictionaryId, ')
+          ..write('expression: $expression, ')
+          ..write('mode: $mode, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$DictionaryDb extends GeneratedDatabase {
   _$DictionaryDb(QueryExecutor e) : super(e);
   $DictionaryDbManager get managers => $DictionaryDbManager(this);
   late final $DictionariesTable dictionaries = $DictionariesTable(this);
   late final $TermsTable terms = $TermsTable(this);
+  late final $EntryExtrasTable entryExtras = $EntryExtrasTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [dictionaries, terms];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    dictionaries,
+    terms,
+    entryExtras,
+  ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
@@ -1087,6 +1498,13 @@ abstract class _$DictionaryDb extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('terms', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'dictionaries',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('entry_extras', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -1132,6 +1550,24 @@ final class $$DictionariesTableReferences
     ).filter((f) => f.dictionaryId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_termsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EntryExtrasTable, List<EntryExtra>>
+  _entryExtrasRefsTable(_$DictionaryDb db) => MultiTypedResultKey.fromTable(
+    db.entryExtras,
+    aliasName: 'dictionaries__id__entry_extras__dictionary_id',
+  );
+
+  $$EntryExtrasTableProcessedTableManager get entryExtrasRefs {
+    final manager = $$EntryExtrasTableTableManager(
+      $_db,
+      $_db.entryExtras,
+    ).filter((f) => f.dictionaryId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_entryExtrasRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -1203,6 +1639,31 @@ class $$DictionariesTableFilterComposer
           }) => $$TermsTableFilterComposer(
             $db: $db,
             $table: $db.terms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> entryExtrasRefs(
+    Expression<bool> Function($$EntryExtrasTableFilterComposer f) f,
+  ) {
+    final $$EntryExtrasTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.entryExtras,
+      getReferencedColumn: (t) => t.dictionaryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntryExtrasTableFilterComposer(
+            $db: $db,
+            $table: $db.entryExtras,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1320,6 +1781,31 @@ class $$DictionariesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> entryExtrasRefs<T extends Object>(
+    Expression<T> Function($$EntryExtrasTableAnnotationComposer a) f,
+  ) {
+    final $$EntryExtrasTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.entryExtras,
+      getReferencedColumn: (t) => t.dictionaryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntryExtrasTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entryExtras,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DictionariesTableTableManager
@@ -1335,7 +1821,7 @@ class $$DictionariesTableTableManager
           $$DictionariesTableUpdateCompanionBuilder,
           (Dictionary, $$DictionariesTableReferences),
           Dictionary,
-          PrefetchHooks Function({bool termsRefs})
+          PrefetchHooks Function({bool termsRefs, bool entryExtrasRefs})
         > {
   $$DictionariesTableTableManager(_$DictionaryDb db, $DictionariesTable table)
     : super(
@@ -1396,37 +1882,61 @@ class $$DictionariesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({termsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (termsRefs) db.terms],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (termsRefs)
-                    await $_getPrefetchedDataByColumns<
-                      Dictionary,
-                      $DictionariesTable,
-                      Term,
-                      $TermsTable
-                    >(
-                      currentTable: table,
-                      referencedTable: $$DictionariesTableReferences
-                          ._termsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$DictionariesTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).termsRefs,
-                      currentColumn: 'id',
-                      referencedColumn: 'dictionary_id',
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({termsRefs = false, entryExtrasRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (termsRefs) db.terms,
+                    if (entryExtrasRefs) db.entryExtras,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (termsRefs)
+                        await $_getPrefetchedDataByColumns<
+                          Dictionary,
+                          $DictionariesTable,
+                          Term,
+                          $TermsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DictionariesTableReferences
+                              ._termsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DictionariesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).termsRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'dictionary_id',
+                          typedResults: items,
+                        ),
+                      if (entryExtrasRefs)
+                        await $_getPrefetchedDataByColumns<
+                          Dictionary,
+                          $DictionariesTable,
+                          EntryExtra,
+                          $EntryExtrasTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DictionariesTableReferences
+                              ._entryExtrasRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DictionariesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entryExtrasRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'dictionary_id',
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1443,9 +1953,10 @@ typedef $$DictionariesTableProcessedTableManager =
       $$DictionariesTableUpdateCompanionBuilder,
       (Dictionary, $$DictionariesTableReferences),
       Dictionary,
-      PrefetchHooks Function({bool termsRefs})
+      PrefetchHooks Function({bool termsRefs, bool entryExtrasRefs})
     >;
 typedef $$TermsTableCreateCompanionBuilder = TermsCompanion Function({
+  Value<String> rawEntry,
   Value<int> id,
   required int dictionaryId,
   required String expression,
@@ -1457,6 +1968,7 @@ typedef $$TermsTableCreateCompanionBuilder = TermsCompanion Function({
   required String rules,
 });
 typedef $$TermsTableUpdateCompanionBuilder = TermsCompanion Function({
+  Value<String> rawEntry,
   Value<int> id,
   Value<int> dictionaryId,
   Value<String> expression,
@@ -1498,6 +2010,11 @@ class $$TermsTableFilterComposer extends Composer<_$DictionaryDb, $TermsTable> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get rawEntry => $composableBuilder(
+    column: $table.rawEntry,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -1571,6 +2088,11 @@ class $$TermsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get rawEntry => $composableBuilder(
+    column: $table.rawEntry,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -1644,6 +2166,9 @@ class $$TermsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get rawEntry =>
+      $composableBuilder(column: $table.rawEntry, builder: (column) => column);
+
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -1728,6 +2253,7 @@ class $$TermsTableTableManager
               $$TermsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String> rawEntry = const Value.absent(),
                 Value<int> id = const Value.absent(),
                 Value<int> dictionaryId = const Value.absent(),
                 Value<String> expression = const Value.absent(),
@@ -1738,6 +2264,7 @@ class $$TermsTableTableManager
                 Value<String> tags = const Value.absent(),
                 Value<String> rules = const Value.absent(),
               }) => TermsCompanion(
+                rawEntry: rawEntry,
                 id: id,
                 dictionaryId: dictionaryId,
                 expression: expression,
@@ -1750,6 +2277,7 @@ class $$TermsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String> rawEntry = const Value.absent(),
                 Value<int> id = const Value.absent(),
                 required int dictionaryId,
                 required String expression,
@@ -1760,6 +2288,7 @@ class $$TermsTableTableManager
                 required String tags,
                 required String rules,
               }) => TermsCompanion.insert(
+                rawEntry: rawEntry,
                 id: id,
                 dictionaryId: dictionaryId,
                 expression: expression,
@@ -1835,6 +2364,318 @@ typedef $$TermsTableProcessedTableManager =
       Term,
       PrefetchHooks Function({bool dictionaryId})
     >;
+typedef $$EntryExtrasTableCreateCompanionBuilder =
+    EntryExtrasCompanion Function({
+      Value<int> id,
+      required int dictionaryId,
+      required String expression,
+      required String mode,
+      required String payload,
+    });
+typedef $$EntryExtrasTableUpdateCompanionBuilder =
+    EntryExtrasCompanion Function({
+      Value<int> id,
+      Value<int> dictionaryId,
+      Value<String> expression,
+      Value<String> mode,
+      Value<String> payload,
+    });
+
+final class $$EntryExtrasTableReferences
+    extends BaseReferences<_$DictionaryDb, $EntryExtrasTable, EntryExtra> {
+  $$EntryExtrasTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $DictionariesTable _dictionaryIdTable(_$DictionaryDb db) => db
+      .dictionaries
+      .createAlias('entry_extras__dictionary_id__dictionaries__id');
+
+  $$DictionariesTableProcessedTableManager get dictionaryId {
+    final $_column = $_itemColumn<int>('dictionary_id')!;
+
+    final manager = $$DictionariesTableTableManager(
+      $_db,
+      $_db.dictionaries,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_dictionaryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EntryExtrasTableFilterComposer
+    extends Composer<_$DictionaryDb, $EntryExtrasTable> {
+  $$EntryExtrasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get expression => $composableBuilder(
+    column: $table.expression,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DictionariesTableFilterComposer get dictionaryId {
+    final $$DictionariesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dictionaryId,
+      referencedTable: $db.dictionaries,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DictionariesTableFilterComposer(
+            $db: $db,
+            $table: $db.dictionaries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntryExtrasTableOrderingComposer
+    extends Composer<_$DictionaryDb, $EntryExtrasTable> {
+  $$EntryExtrasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get expression => $composableBuilder(
+    column: $table.expression,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DictionariesTableOrderingComposer get dictionaryId {
+    final $$DictionariesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dictionaryId,
+      referencedTable: $db.dictionaries,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DictionariesTableOrderingComposer(
+            $db: $db,
+            $table: $db.dictionaries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntryExtrasTableAnnotationComposer
+    extends Composer<_$DictionaryDb, $EntryExtrasTable> {
+  $$EntryExtrasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get expression => $composableBuilder(
+    column: $table.expression,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  $$DictionariesTableAnnotationComposer get dictionaryId {
+    final $$DictionariesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dictionaryId,
+      referencedTable: $db.dictionaries,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DictionariesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.dictionaries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntryExtrasTableTableManager
+    extends
+        RootTableManager<
+          _$DictionaryDb,
+          $EntryExtrasTable,
+          EntryExtra,
+          $$EntryExtrasTableFilterComposer,
+          $$EntryExtrasTableOrderingComposer,
+          $$EntryExtrasTableAnnotationComposer,
+          $$EntryExtrasTableCreateCompanionBuilder,
+          $$EntryExtrasTableUpdateCompanionBuilder,
+          (EntryExtra, $$EntryExtrasTableReferences),
+          EntryExtra,
+          PrefetchHooks Function({bool dictionaryId})
+        > {
+  $$EntryExtrasTableTableManager(_$DictionaryDb db, $EntryExtrasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntryExtrasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntryExtrasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntryExtrasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> dictionaryId = const Value.absent(),
+                Value<String> expression = const Value.absent(),
+                Value<String> mode = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+              }) => EntryExtrasCompanion(
+                id: id,
+                dictionaryId: dictionaryId,
+                expression: expression,
+                mode: mode,
+                payload: payload,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int dictionaryId,
+                required String expression,
+                required String mode,
+                required String payload,
+              }) => EntryExtrasCompanion.insert(
+                id: id,
+                dictionaryId: dictionaryId,
+                expression: expression,
+                mode: mode,
+                payload: payload,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$EntryExtrasTable, EntryExtra>(table),
+                  $$EntryExtrasTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({dictionaryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (dictionaryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.dictionaryId,
+                        referencedTable: $$EntryExtrasTableReferences
+                            ._dictionaryIdTable(db),
+                        referencedColumn: $$EntryExtrasTableReferences
+                            ._dictionaryIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EntryExtrasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$DictionaryDb,
+      $EntryExtrasTable,
+      EntryExtra,
+      $$EntryExtrasTableFilterComposer,
+      $$EntryExtrasTableOrderingComposer,
+      $$EntryExtrasTableAnnotationComposer,
+      $$EntryExtrasTableCreateCompanionBuilder,
+      $$EntryExtrasTableUpdateCompanionBuilder,
+      (EntryExtra, $$EntryExtrasTableReferences),
+      EntryExtra,
+      PrefetchHooks Function({bool dictionaryId})
+    >;
 
 class $DictionaryDbManager {
   final _$DictionaryDb _db;
@@ -1843,6 +2684,8 @@ class $DictionaryDbManager {
       $$DictionariesTableTableManager(_db, _db.dictionaries);
   $$TermsTableTableManager get terms =>
       $$TermsTableTableManager(_db, _db.terms);
+  $$EntryExtrasTableTableManager get entryExtras =>
+      $$EntryExtrasTableTableManager(_db, _db.entryExtras);
 }
 
 class $SavedWordsTable extends SavedWords

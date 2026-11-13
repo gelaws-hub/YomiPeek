@@ -156,7 +156,7 @@ class _FloatingSettingsPageState extends ConsumerState<FloatingSettingsPage>
               contentPadding: EdgeInsets.zero,
               title: const Text('Floating shortcut'),
               subtitle: const Text(
-                'Keeps a small movable lookup button above other apps. Close it with × or Stop in the ongoing notification. Android may ask to show notifications; denial does not block lookup.',
+                'Keeps a small movable lookup button above other apps. Hold the shortcut to dismiss it, or use Stop in the ongoing notification. Android may ask to show notifications; denial does not block lookup.',
               ),
               value: state.shortcut,
               onChanged: working || !state.permission

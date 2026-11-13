@@ -17,6 +17,7 @@ class Dictionaries extends Table {
 }
 
 class Terms extends Table {
+  TextColumn get rawEntry => text().withDefault(const Constant(''))();
   IntColumn get id => integer().autoIncrement()();
   IntColumn get dictionaryId =>
       integer().references(Dictionaries, #id, onDelete: KeyAction.cascade)();
@@ -27,6 +28,15 @@ class Terms extends Table {
   TextColumn get definitions => text()();
   TextColumn get tags => text()();
   TextColumn get rules => text()();
+}
+
+class EntryExtras extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get dictionaryId =>
+      integer().references(Dictionaries, #id, onDelete: KeyAction.cascade)();
+  TextColumn get expression => text()();
+  TextColumn get mode => text()();
+  TextColumn get payload => text()();
 }
 
 class SavedWords extends Table {
@@ -56,17 +66,29 @@ class Preferences extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [Dictionaries, Terms])
+@DriftDatabase(tables: [Dictionaries, Terms, EntryExtras])
 class DictionaryDb extends _$DictionaryDb {
   DictionaryDb(super.e);
   factory DictionaryDb.file(File file) =>
       DictionaryDb(NativeDatabase.createInBackground(file));
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(terms, terms.rawEntry);
+        await m.createTable(entryExtras);
+        await customStatement(
+          'CREATE INDEX extras_lookup ON entry_extras(dictionary_id, expression, mode)',
+        );
+      }
+    },
     onCreate: (m) async {
       await m.createAll();
+      await customStatement(
+        'CREATE INDEX extras_lookup ON entry_extras(dictionary_id, expression, mode)',
+      );
       await customStatement(
         'CREATE INDEX term_expression ON terms(normalized COLLATE NOCASE)',
       );

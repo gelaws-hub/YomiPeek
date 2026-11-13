@@ -12,6 +12,8 @@ Future<File> fixture(
   bool malformed = false,
   bool unsafe = false,
   int copies = 1,
+  bool rich = false,
+  bool kanjiOnly = false,
 }) async {
   final archive = Archive();
   void add(String name, Object content) {
@@ -33,7 +35,40 @@ Future<File> fixture(
       'verb',
       'v1',
       0,
-      ['synthetic meal action'],
+      rich
+          ? [
+              {
+                'type': 'structured-content',
+                'content': [
+                  {
+                    'tag': 'ul',
+                    'data': {'content': 'glossary'},
+                    'content': {
+                      'tag': 'li',
+                      'content': 'synthetic meal action',
+                    },
+                  },
+                  {
+                    'tag': 'ul',
+                    'data': {'content': 'examples'},
+                    'content': [
+                      {'tag': 'li', 'content': '食べました。読んでいる。'},
+                      {
+                        'tag': 'li',
+                        'lang': 'en',
+                        'content': 'Original synthetic example.',
+                      },
+                    ],
+                  },
+                  {
+                    'tag': 'a',
+                    'href': '?query=読む&wildcards=off',
+                    'content': '読む',
+                  },
+                ],
+              },
+            ]
+          : ['synthetic meal action'],
       1,
       '',
     ],
@@ -93,14 +128,48 @@ Future<File> fixture(
       '',
     ],
   ];
-  add(
-    'term_bank_1.json',
-    malformed
-        ? [
-            ['bad'],
-          ]
-        : [for (var i = 0; i < copies; i++) ...rows],
-  );
+  if (!kanjiOnly) {
+    add(
+      'term_bank_1.json',
+      malformed
+          ? [
+              ['bad'],
+            ]
+          : [for (var i = 0; i < copies; i++) ...rows],
+    );
+  }
+  if (rich) {
+    add('tag_bank_1.json', [
+      ['verb', 'partOfSpeech', 1, 'An original verb tag', 0],
+    ]);
+    add('term_meta_bank_1.json', [
+      [
+        '食べる',
+        'freq',
+        {'reading': 'たべる', 'frequency': 42},
+      ],
+      [
+        '食べる',
+        'pitch',
+        {
+          'reading': 'たべる',
+          'pitches': [
+            {'position': 2},
+          ],
+        },
+      ],
+    ]);
+    add('kanji_bank_1.json', [
+      [
+        '食',
+        'ショク',
+        'た.べる',
+        '',
+        ['synthetic food character'],
+        {'strokes': '9'},
+      ],
+    ]);
+  }
   if (unsafe) add('../escape.json', {});
   final file = File('${directory.path}/fixture-$revision.zip');
   await file.writeAsBytes(ZipEncoder().encode(archive));

@@ -43,7 +43,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle(const Duration(milliseconds: 300));
-      expect(find.text('Selected text'), findsOneWidget);
+      expect(find.text('Explore text'), findsOneWidget);
       await tester.tap(find.text('読'));
       await tester.pumpAndSettle(const Duration(milliseconds: 300));
       expect(find.text('読む'), findsOneWidget);

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app.dart';
 import '../dictionary/data/repository.dart';
 import '../dictionary/search/selection.dart';
+import '../dictionary/explorer/explorer.dart';
 
 class LookupPage extends ConsumerStatefulWidget {
   const LookupPage({required this.text, super.key});
@@ -28,7 +29,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.text.length <= 64) {
+      if (widget.text.length <= 64 && !RegExp(r'[。！？]').hasMatch(widget.text)) {
         search(controller.text, remember: true);
       } else {
         choose(0);
@@ -97,7 +98,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Selected text')),
+    appBar: AppBar(title: const Text('Explore text')),
     body: CustomScrollView(
       key: const Key('selection-scroll'),
       slivers: [
@@ -118,7 +119,18 @@ class _LookupPageState extends ConsumerState<LookupPage> {
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'Tap the first character of a word, or edit the search below. Selections are limited to 2,000 characters.',
+                    'Follow a word below, or tap any character to explore another reading.',
+                  ),
+                ),
+              if (widget.text.isNotEmpty && hasJapanese(widget.text))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: SentenceWords(
+                    text: widget.text,
+                    onChoose: (word) {
+                      controller.text = word;
+                      search(word, remember: true);
+                    },
                   ),
                 ),
               Padding(
@@ -131,7 +143,6 @@ class _LookupPageState extends ConsumerState<LookupPage> {
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     labelText: 'Lookup',
-                    border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       tooltip: 'Paste text',
                       icon: const Icon(Icons.content_paste),

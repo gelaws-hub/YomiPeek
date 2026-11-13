@@ -39,7 +39,9 @@ Future<void> importDictionary(
   final existing = await (db.select(
     db.dictionaries,
   )..where((d) => d.title.equals(title))).getSingleOrNull();
-  if (existing != null && existing.revision == revision) {
+  if (existing != null &&
+      existing.revision == revision &&
+      (jsonDecode(existing.metadata) as Map)['yomipeekRichImport'] == true) {
     throw ImportFailure('This dictionary revision is already installed.');
   }
   var count = 0;
@@ -83,6 +85,7 @@ Future<void> importDictionary(
                     definitions: r[2],
                     tags: r[3],
                     rules: r[4],
+                    rawEntry: Value(r[5]),
                   ),
                 )
                 .toList(),
@@ -92,11 +95,36 @@ Future<void> importDictionary(
         progress?.call('$count entries imported');
       }
     }
+    for (final name
+        in (metadata['yomipeekExtraBanks'] as List).cast<String>()) {
+      control?.check();
+      progress?.call('Reading $name');
+      final extras = await readExtrasAsync(path, name);
+      if (name.startsWith('kanji_bank_')) count += extras.length;
+      for (var start = 0; start < extras.length; start += 500) {
+        control?.check();
+        await db.batch(
+          (b) => b.insertAll(
+            db.entryExtras,
+            extras
+                .skip(start)
+                .take(500)
+                .map(
+                  (r) => EntryExtrasCompanion.insert(
+                    dictionaryId: id,
+                    expression: r[0],
+                    mode: r[1],
+                    payload: r[2],
+                  ),
+                )
+                .toList(),
+          ),
+        );
+      }
+    }
     control?.check();
     if (count == 0) {
-      throw ImportFailure(
-        'No vocabulary entries found. Only term dictionaries are supported in phase 1.',
-      );
+      throw ImportFailure('No vocabulary or kanji entries found.');
     }
     await (db.update(db.dictionaries)..where((d) => d.id.equals(id))).write(
       DictionariesCompanion(entries: Value(count)),
@@ -156,11 +184,34 @@ Future<void> importDictionary(
             .where((n) => RegExp(r'^term_bank_[0-9]+\.json$').hasMatch(n))
             .toList()
           ..sort();
-    if (banks.isEmpty) {
+    if (banks.isEmpty &&
+        !names.any((n) => RegExp(r'^kanji_bank_[0-9]+\.json$').hasMatch(n))) {
       throw ImportFailure(
-        'No term banks found. Kanji-only and metadata-only dictionaries are not yet supported.',
+        'No vocabulary or kanji banks found. Import a dictionary containing entries.',
       );
     }
+    final tags = <String, dynamic>{};
+    for (final name in names.where(
+      (n) => RegExp(r'^tag_bank_[0-9]+\.json$').hasMatch(n),
+    )) {
+      final rows =
+          jsonDecode(utf8.decode(archive.findFile(name)!.content)) as List;
+      for (final row in rows) {
+        if (row is List && row.length == 5 && row[0] is String) {
+          tags[row[0]] = row;
+        }
+      }
+    }
+    meta['yomipeekKind'] = banks.isEmpty ? 'Kanji' : 'Vocabulary';
+    meta['yomipeekTags'] = tags;
+    meta['yomipeekRichImport'] = true;
+    meta['yomipeekExtraBanks'] = names
+        .where(
+          (n) =>
+              RegExp(r'^(term_meta|kanji|kanji_meta)_bank_[0-9]+\.json$')
+                  .hasMatch(n),
+        )
+        .toList();
     return (meta, banks, total);
   } finally {
     stream.closeSync();
@@ -196,6 +247,7 @@ List<List<String>> readTerms(String path, String bank) {
         definitions,
         '${raw[2]} ${raw[7]}'.trim(),
         raw[3] as String,
+        jsonEncode(raw),
       ];
     }).toList();
   } finally {
@@ -222,3 +274,39 @@ Future<(Map<String, dynamic>, List<String>, int)> inspectAsync(String path) =>
     Isolate.run(() => inspectArchive(path));
 Future<List<List<String>>> readAsync(String path, String name) =>
     Isolate.run(() => readTerms(path, name));
+
+List<List<String>> readExtras(String path, String bank) {
+  final stream = InputFileStream(path);
+  try {
+    final archive = ZipDecoder().decodeStream(stream, verify: true);
+    final rows =
+        jsonDecode(utf8.decode(archive.findFile(bank)!.content)) as List;
+    return rows.map((raw) {
+      if (raw is! List || raw.isEmpty || raw[0] is! String) {
+        throw ImportFailure('Invalid metadata row in $bank.');
+      }
+      final kanji = bank.startsWith('kanji_bank_');
+      if (kanji ? raw.length != 6 : raw.length != 3 || raw[1] is! String) {
+        throw ImportFailure('Invalid metadata row in $bank.');
+      }
+      if (kanji &&
+          (raw[1] is! String ||
+              raw[2] is! String ||
+              raw[3] is! String ||
+              raw[4] is! List ||
+              raw[5] is! Map)) {
+        throw ImportFailure('Invalid kanji row in $bank.');
+      }
+      return [
+        raw[0] as String,
+        kanji ? 'kanji' : raw[1] as String,
+        jsonEncode(raw),
+      ];
+    }).toList();
+  } finally {
+    stream.closeSync();
+  }
+}
+
+Future<List<List<String>>> readExtrasAsync(String path, String name) =>
+    Isolate.run(() => readExtras(path, name));

@@ -12,6 +12,8 @@ import 'package:yomipeek/features/dictionary/import/importer.dart';
 
 import '../test/fixture.dart';
 
+import 'package:yomipeek/features/dictionary/explorer/explorer.dart';
+
 import 'package:yomipeek/core/platform/android_gateway.dart';
 
 void main() {
@@ -141,6 +143,77 @@ void main() {
       await tester.pumpAndSettle();
       await db.close();
       await user.close();
+    },
+  );
+  testWidgets(
+    'dictionary browser follows an example into another entry and back',
+    (tester) async {
+      final directory = await Directory(
+        '${(await getTemporaryDirectory()).path}/explorer-${DateTime.now().millisecondsSinceEpoch}',
+      ).create();
+      final db = DictionaryDb.file(File('${directory.path}/dictionary.sqlite'));
+      final user = UserDb.file(File('${directory.path}/user.sqlite'));
+      final repo = DictionaryRepository(db, user);
+      await importDictionary((await fixture(directory, rich: true)).path, db);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [repositoryProvider.overrideWithValue(repo)],
+          child: const YomiPeekApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('search')), '食べました');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      await tester.tap(find.byTooltip('Explore word'));
+      await tester.pumpAndSettle();
+      final example = find.text('食べました。読んでいる。');
+      await tester.ensureVisible(example);
+      await tester.tap(example);
+      await tester.pumpAndSettle();
+      expect(find.text('Explore text'), findsOneWidget);
+      final readChip = find.byWidgetPredicate(
+        (w) =>
+            w is ActionChip &&
+            w.label is Text &&
+            (w.label as Text).data == '読んでいる',
+      );
+      await tester.ensureVisible(readChip);
+      await tester.tap(readChip);
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      expect(find.text('読む'), findsOneWidget);
+      await tester.ensureVisible(find.byTooltip('Explore word'));
+      await tester.tap(find.byTooltip('Explore word'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WordDetailPage), findsOneWidget);
+      expect(find.text('読む'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Explore text'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<WordDetailPage>(find.byType(WordDetailPage))
+            .result
+            .term
+            .expression,
+        '食べる',
+      );
+      // The persisted native preference matches changes from the Flutter theme setting.
+      final context = tester.element(find.byType(WordDetailPage));
+      final container = ProviderScope.containerOf(context);
+      final previous = (await container.read(androidProvider).state()).theme;
+      await container.read(androidProvider).setTheme('dark');
+      expect((await container.read(androidProvider).state()).theme, 'dark');
+      await container.read(androidProvider).setTheme('light');
+      expect((await container.read(androidProvider).state()).theme, 'light');
+      await container.read(androidProvider).setTheme(previous);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await db.close();
+      await user.close();
+      await directory.delete(recursive: true);
     },
   );
 }

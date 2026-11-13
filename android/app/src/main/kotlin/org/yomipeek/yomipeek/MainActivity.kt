@@ -44,11 +44,16 @@ class MainActivity: FlutterActivity() {
     }
     override fun onPostResume() {
         super.onPostResume()
+        OverlayService.setHostVisible(true)
         android.util.Log.d("YomiPeek", "Activity resumed; overlay permission=${Settings.canDrawOverlays(this)}")
         integration?.channel?.invokeMethod("changed", null)
         if (OverlayService.shortcutEnabled(this) && Settings.canDrawOverlays(this)) {
             try { OverlayService.start(this, OverlayService.SHORTCUT) } catch (_: Exception) { OverlayService.setShortcut(this, false); android.widget.Toast.makeText(this, "Floating lookup could not resume. Enable it again in settings.", android.widget.Toast.LENGTH_LONG).show() }
         }
+    }
+    override fun onPause() {
+        OverlayService.setHostVisible(false)
+        super.onPause()
     }
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         if (registered) { unregisterReceiver(changes); registered = false }

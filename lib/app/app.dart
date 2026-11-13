@@ -13,6 +13,8 @@ import '../features/floating_lookup/lookup_page.dart';
 import '../features/floating_lookup/settings_page.dart';
 import '../features/dictionary/data/repository.dart';
 import '../features/dictionary/import/importer.dart';
+import '../features/dictionary/explorer/explorer.dart';
+import 'design.dart';
 
 final repositoryProvider = Provider<DictionaryRepository>(
   (ref) => throw StateError('Repository must be supplied'),
@@ -34,6 +36,7 @@ class ThemeSetting extends Notifier<ThemeMode> {
           orElse: () => ThemeMode.system,
         );
       }
+      if (ref.mounted) ref.read(androidProvider).setTheme(state.name);
     });
     return ThemeMode.system;
   }
@@ -47,6 +50,7 @@ class ThemeSetting extends Notifier<ThemeMode> {
         .insertOnConflictUpdate(
           PreferencesCompanion.insert(key: 'theme', value: mode.name),
         );
+    await ref.read(androidProvider).setTheme(mode.name);
   }
 }
 
@@ -57,18 +61,8 @@ class YomiPeekApp extends ConsumerWidget {
     title: 'YomiPeek',
     debugShowCheckedModeBanner: false,
     themeMode: ref.watch(themeProvider),
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff38675c)),
-      scaffoldBackgroundColor: const Color(0xfff7f9f7),
-    ),
-    darkTheme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xff78b8a4),
-        brightness: Brightness.dark,
-      ),
-    ),
+    theme: readingTheme(Brightness.light),
+    darkTheme: readingTheme(Brightness.dark),
     routes: {
       '/': (_) => const HomePage(),
       '/dictionaries': (_) => const DictionaryManager(),
@@ -136,7 +130,20 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('YomiPeek'),
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('YomiPeek'),
+          Text(
+            'A little Japanese, every day.',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              letterSpacing: .3,
+            ),
+          ),
+        ],
+      ),
       actions: [
         IconButton(
           tooltip: 'Manage dictionaries',
@@ -147,7 +154,12 @@ class _HomePageState extends ConsumerState<HomePage> {
     ),
     body: IndexedStack(
       index: index,
-      children: const [SearchPage(), VocabularyPage(), SettingsPage()],
+      children: const [
+        SearchPage(),
+        SentenceStudioPage(),
+        VocabularyPage(),
+        SettingsPage(),
+      ],
     ),
     bottomNavigationBar: NavigationBar(
       labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
@@ -158,6 +170,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           icon: Icon(Icons.search),
           label: 'Dictionary',
           tooltip: 'Dictionary',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.auto_stories_outlined),
+          label: 'Explore',
+          tooltip: 'Explore',
         ),
         NavigationDestination(
           icon: Icon(Icons.bookmark_outline),
@@ -258,6 +275,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       return Column(
         children: [
           Padding(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Find your next word.',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Japanese at a glance. A whole world underneath.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.local_florist_outlined,
+                  color: Theme.of(context).colorScheme.secondary,
+                  size: 30,
+                ),
+              ],
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: TextField(
               key: const Key('search'),
@@ -267,7 +312,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               onSubmitted: (v) => search(v, remember: true),
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Japanese or definition',
+                hintText: 'A word, a meaning, a new discovery…',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
                   tooltip: 'Clear search',
@@ -283,6 +328,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
             ),
           ),
+          if (controller.text.runes.length == 1 && hasJapanese(controller.text))
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, bottom: 8),
+                child: ActionChip(
+                  label: const Text('Explore character'),
+                  avatar: const Icon(Icons.translate, size: 16),
+                  onPressed: () => openKanji(context, controller.text),
+                ),
+              ),
+            ),
           Expanded(
             child: installed.isEmpty
                 ? Center(
@@ -331,9 +388,57 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     stream: history,
                     builder: (context, snapshot) => ListView(
                       children: [
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withValues(alpha: .45),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.auto_stories_outlined, size: 30),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Follow your curiosity',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const Text(
+                                      'Paste a sentence. Discover its words. Follow where they lead.',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Open sentence explorer',
+                                icon: const Icon(Icons.arrow_forward),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const Scaffold(
+                                      body: SafeArea(
+                                        child: SentenceStudioPage(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         const ListTile(
-                          title: Text('Recent searches'),
-                          subtitle: Text('Submit a search to keep it here.'),
+                          title: Text('Your recent discoveries'),
+                          subtitle: Text('Pick up where you left off.'),
                         ),
                         ...?snapshot.data?.map(
                           (h) => ListTile(
@@ -360,15 +465,40 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: results.length + 1,
-                    itemBuilder: (context, i) => i == results.length
+                    itemCount: results.length + 2,
+                    itemBuilder: (context, i) => i == 0
+                        ? Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${results.length} matches',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge,
+                                  ),
+                                ),
+                                if (hasJapanese(controller.text))
+                                  IconButton(
+                                    tooltip: 'Explore sentence',
+                                    onPressed: () =>
+                                        exploreText(context, controller.text),
+                                    icon: const Icon(
+                                      Icons.account_tree_outlined,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          )
+                        : i == results.length + 1
                         ? const Padding(
                             padding: EdgeInsets.all(20),
                             child: Text(
                               'Showing up to 100 results. Refine your search for more.',
                             ),
                           )
-                        : WordCard(result: results[i]),
+                        : WordCard(result: results[i - 1]),
                   ),
           ),
         ],
@@ -383,107 +513,140 @@ class WordCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final word = result.term;
+    final colors = Theme.of(context).colorScheme;
+    void open() => Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => WordDetailPage(result: result)),
+    );
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: SelectableText(
-                    word.expression,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Save word',
-                  onPressed: () async {
-                    try {
-                      await ref.read(repositoryProvider).save(result);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Saved to vocabulary')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) showError(context, e);
-                    }
-                  },
-                  icon: const Icon(Icons.bookmark_add_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Speak Japanese',
-                  icon: const Icon(Icons.volume_up_outlined),
-                  onPressed: () async {
-                    try {
-                      await ref
-                          .read(androidProvider)
-                          .speak(
-                            word.reading.isEmpty
-                                ? word.expression
-                                : word.reading,
-                          );
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              e is PlatformException
-                                  ? e.message ?? 'Japanese voice unavailable.'
-                                  : 'Japanese voice unavailable.',
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: open,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          word.expression,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        if (word.reading.isNotEmpty)
+                          Text(
+                            word.reading,
+                            style: TextStyle(
+                              color: colors.primary,
+                              fontSize: 16,
                             ),
                           ),
-                        );
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Save word',
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    onPressed: () async {
+                      try {
+                        await ref.read(repositoryProvider).save(result);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Saved to vocabulary'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) showError(context, e);
                       }
-                    }
-                  },
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) =>
-                      Clipboard.setData(ClipboardData(text: value)),
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: word.expression,
-                      child: const Text('Copy expression'),
-                    ),
-                    PopupMenuItem(
-                      value: word.reading,
-                      child: const Text('Copy reading'),
-                    ),
-                    PopupMenuItem(
-                      value: word.definitions,
-                      child: const Text('Copy definitions'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (word.reading.isNotEmpty)
-              SelectableText(
-                word.reading,
-                style: Theme.of(context).textTheme.titleMedium,
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Speak Japanese',
+                    icon: const Icon(Icons.volume_up_outlined),
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(androidProvider)
+                            .speak(
+                              word.reading.isEmpty
+                                  ? word.expression
+                                  : word.reading,
+                            );
+                      } catch (e) {
+                        if (context.mounted) showError(context, e);
+                      }
+                    },
+                  ),
+                ],
               ),
-            const SizedBox(height: 8),
-            Text(
-              [word.tags, word.rules].where((s) => s.isNotEmpty).join(' · '),
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
-            if (result.inflection.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text('Matched via ${result.inflection.join(' → ')}'),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final tag
+                      in word.tags
+                          .split(' ')
+                          .where((t) => t.isNotEmpty)
+                          .take(5))
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.secondaryContainer.withValues(alpha: .6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        tag,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                ],
               ),
-            const SizedBox(height: 12),
-            SelectableText(word.definitions),
-            const SizedBox(height: 12),
-            Text(
-              result.source,
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
-            ),
-          ],
+              if (result.inflection.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Matched via ${result.inflection.join(' → ')}',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: colors.primary),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              Text(
+                word.definitions,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      result.source,
+                      style: Theme.of(context).textTheme.labelSmall
+                          ?.copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Explore word',
+                    onPressed: open,
+                    icon: const Icon(Icons.north_east, size: 19),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -526,6 +689,7 @@ class VocabularyPage extends ConsumerWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: ListTile(
                   isThreeLine: true,
+                  onTap: () => exploreText(context, w.expression),
                   title: Text('${w.expression}  ${w.reading}'),
                   subtitle: Text('${w.definitions}\n${w.source}'),
                   trailing: IconButton(
@@ -675,7 +839,7 @@ class _DictionaryManagerState extends ConsumerState<DictionaryManager> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Import a Yomitan format-3 term dictionary you are authorized to use. Your dictionaries stay on this device.',
+                  'Import a Yomitan format-3 word or character dictionary you are authorized to use. Your dictionaries stay on this device.',
                 ),
                 const SizedBox(height: 12),
                 IconButton.filled(
@@ -729,7 +893,7 @@ class _DictionaryManagerState extends ConsumerState<DictionaryManager> {
                                   contentPadding: EdgeInsets.zero,
                                   title: Text(d.title),
                                   subtitle: Text(
-                                    'Vocabulary · format 3\nRevision ${d.revision}\n${d.entries} entries · ${(d.bytes / 1048576).toStringAsFixed(1)} MiB source',
+                                    '${(jsonDecode(d.metadata) as Map)['yomipeekKind'] ?? 'Vocabulary'} · format 3\nRevision ${d.revision}\n${d.entries} entries · ${(d.bytes / 1048576).toStringAsFixed(1)} MiB source',
                                   ),
                                   value: d.enabled,
                                   onChanged: busy
@@ -854,6 +1018,7 @@ class SettingsPage extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: DropdownButtonFormField<ThemeMode>(
+          key: ValueKey(ref.watch(themeProvider)),
           initialValue: ref.watch(themeProvider),
           decoration: const InputDecoration(labelText: 'Theme'),
           items: ThemeMode.values
@@ -918,7 +1083,7 @@ class SettingsPage extends ConsumerWidget {
       const ListTile(
         title: Text('About YomiPeek'),
         subtitle: Text(
-          'Japanese at a glance.\nOffline dictionary · Phase 2\nStudy, Reader, and Google Drive are planned.',
+          'Japanese at a glance.\nAn offline dictionary for curious readers.',
         ),
       ),
     ],

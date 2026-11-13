@@ -42,10 +42,15 @@ internal class PlatformChannelHandler(private val activity: MainActivity, val ch
             try {
                 when (call.method) {
                     "initialSelection" -> result.success(activity.takeSelection())
+                    "setTheme" -> {
+                        val mode = (call.arguments as? String).takeIf { it in listOf("system", "light", "dark") } ?: "system"
+                        activity.getSharedPreferences("floating", android.content.Context.MODE_PRIVATE).edit().putString("theme", mode).apply()
+                        result.success(null)
+                    }
                     "floatingState" -> {
                         val allowed = Settings.canDrawOverlays(activity)
                         android.util.Log.d("YomiPeek", "Overlay permission queried: $allowed")
-                        result.success(mapOf("permission" to allowed, "shortcut" to OverlayService.shortcutEnabled(activity)))
+                        result.success(mapOf("permission" to allowed, "shortcut" to OverlayService.shortcutEnabled(activity), "theme" to activity.getSharedPreferences("floating", android.content.Context.MODE_PRIVATE).getString("theme", "system")))
                     }
                     "overlayPermission" -> {
                         activity.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${activity.packageName}")))
