@@ -15,6 +15,8 @@ import '../features/dictionary/data/repository.dart';
 import '../features/dictionary/import/importer.dart';
 import '../features/dictionary/explorer/explorer.dart';
 import 'design.dart';
+import '../features/appearance/fonts.dart';
+import '../features/appearance/font_settings_page.dart';
 
 final repositoryProvider = Provider<DictionaryRepository>(
   (ref) => throw StateError('Repository must be supplied'),
@@ -57,17 +59,30 @@ class ThemeSetting extends Notifier<ThemeMode> {
 class YomiPeekApp extends ConsumerWidget {
   const YomiPeekApp({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
-    title: 'YomiPeek',
-    debugShowCheckedModeBanner: false,
-    themeMode: ref.watch(themeProvider),
-    theme: readingTheme(Brightness.light),
-    darkTheme: readingTheme(Brightness.dark),
-    routes: {
-      '/': (_) => const HomePage(),
-      '/dictionaries': (_) => const DictionaryManager(),
-    },
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fonts = ref.watch(japaneseFontsProvider);
+    return MaterialApp(
+      title: 'YomiPeek',
+      debugShowCheckedModeBanner: false,
+      themeMode: ref.watch(themeProvider),
+      theme: readingTheme(
+        Brightness.light,
+        readingFamily: fonts.family,
+        readingScale: fonts.scale,
+        readingHeight: fonts.lineHeight,
+      ),
+      darkTheme: readingTheme(
+        Brightness.dark,
+        readingFamily: fonts.family,
+        readingScale: fonts.scale,
+        readingHeight: fonts.lineHeight,
+      ),
+      routes: {
+        '/': (_) => const HomePage(),
+        '/dictionaries': (_) => const DictionaryManager(),
+      },
+    );
+  }
 }
 
 void showError(BuildContext context, Object error) {
@@ -130,6 +145,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
+      leading: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Image.asset(
+          'design/logo-final/yomipeek-icon-1024.png',
+          semanticLabel: 'YomiPeek logo',
+        ),
+      ),
       title: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -306,6 +328,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: TextField(
               key: const Key('search'),
+              style: readingStyle(context, const TextStyle(fontSize: 18)),
               controller: controller,
               inputFormatters: [LengthLimitingTextInputFormatter(512)],
               onChanged: search,
@@ -349,16 +372,20 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.travel_explore,
-                              size: 72,
-                              color: Theme.of(context).colorScheme.primary,
+                            Image.asset(
+                              'design/logo-final/yomipeek-icon-1024.png',
+                              width: 72,
+                              height: 72,
+                              semanticLabel: 'YomiPeek logo',
                             ),
                             const SizedBox(height: 24),
                             Text(
                               'Your Japanese dictionary,\nyour way.',
                               textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.headlineMedium,
+                              style: readingStyle(
+                                context,
+                                Theme.of(context).textTheme.headlineMedium,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             const Text(
@@ -535,14 +562,17 @@ class WordCard extends ConsumerWidget {
                       children: [
                         Text(
                           word.expression,
-                          style: Theme.of(context).textTheme.headlineMedium,
+                          style: readingStyle(
+                            context,
+                            Theme.of(context).textTheme.headlineMedium,
+                          ),
                         ),
                         if (word.reading.isNotEmpty)
                           Text(
                             word.reading,
-                            style: TextStyle(
-                              color: colors.primary,
-                              fontSize: 16,
+                            style: readingStyle(
+                              context,
+                              TextStyle(color: colors.primary, fontSize: 16),
                             ),
                           ),
                       ],
@@ -625,7 +655,10 @@ class WordCard extends ConsumerWidget {
                 word.definitions,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: readingStyle(
+                  context,
+                  Theme.of(context).textTheme.bodyLarge,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -690,7 +723,13 @@ class VocabularyPage extends ConsumerWidget {
                 child: ListTile(
                   isThreeLine: true,
                   onTap: () => exploreText(context, w.expression),
-                  title: Text('${w.expression}  ${w.reading}'),
+                  title: Text(
+                    '${w.expression}  ${w.reading}',
+                    style: readingStyle(
+                      context,
+                      Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
                   subtitle: Text('${w.definitions}\n${w.source}'),
                   trailing: IconButton(
                     tooltip: 'Remove saved word',
@@ -1035,6 +1074,14 @@ class SettingsPage extends ConsumerWidget {
               }
             }
           },
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.font_download_outlined),
+        title: const Text('Japanese typography'),
+        subtitle: const Text('Mincho, Gothic, rounded and your own fonts'),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const FontSettingsPage()),
         ),
       ),
       ListTile(

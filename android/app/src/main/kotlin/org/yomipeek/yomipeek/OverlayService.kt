@@ -1,6 +1,8 @@
 package org.yomipeek.yomipeek
 
 import android.app.*
+import android.animation.ValueAnimator
+import java.util.Locale
 import android.content.*
 import android.content.ClipboardManager
 import android.content.res.Configuration
@@ -47,6 +49,10 @@ class OverlayService: Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var panel: LinearLayout? = null
     private var bubble: LinearLayout? = null
+    private var expanded = false
+    private var resizing: ValueAnimator? = null
+    private var readingFont = ReadingFont()
+    private var readingFace: Typeface? = null
     private var panelParams: WindowManager.LayoutParams? = null
     private var query: EditText? = null
     private var content: LinearLayout? = null
@@ -63,10 +69,13 @@ class OverlayService: Service() {
     private val browsingHistory = java.util.ArrayDeque<Pair<String, String>>()
     private var backButton: ImageButton? = null
     private val appearanceChanges = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "theme") handler.post { rebuildAppearance() }
+        if (key == "theme" || key == "typography") handler.post { rebuildAppearance() }
     }
     private fun rebuildAppearance() {
         val wasClosing = closing
+        val wasExpanded = expanded
+        readingFont = ReadingFonts.read(this); readingFace = ReadingFonts.face(this, readingFont)
+        resizing?.cancel(); resizing = null
         val selected = sourceText
         val value = query?.text?.toString()
         val position = panelParams?.let { Pair(it.x, it.y) }
@@ -80,7 +89,7 @@ class OverlayService: Service() {
             return
         }
         if (value != null) {
-            showPanel(selected); query?.setText(value)
+            showPanel(selected); query?.setText(value); resizePanel(wasExpanded, false)
             panelParams?.let { layout -> position?.let { layout.x = it.first; layout.y = it.second; panel?.let { windows.updateViewLayout(it, layout) } } }
         }
     }
@@ -96,6 +105,7 @@ class OverlayService: Service() {
         windows = getSystemService(WINDOW_SERVICE) as WindowManager
         (getSystemService(APP_OPS_SERVICE) as AppOpsManager).startWatchingMode(AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW, packageName, permissionChanges)
         getSharedPreferences("floating", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(appearanceChanges)
+        readingFont = ReadingFonts.read(this); readingFace = ReadingFonts.face(this, readingFont)
         speech = JapaneseSpeech(this)
         val notifications = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notifications.createNotificationChannel(NotificationChannel(CHANNEL, "Floating dictionary", NotificationManager.IMPORTANCE_LOW))
@@ -106,7 +116,7 @@ class OverlayService: Service() {
         try {
             val stop = PendingIntent.getService(this, 1, Intent(this, OverlayService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val open = PendingIntent.getActivity(this, 2, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val notification = Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.yomipeek_notification).setContentTitle("YomiPeek floating lookup")
+            val notification = Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.yomipeek_icon_monochrome).setContentTitle("YomiPeek floating lookup")
                 .setContentText("Tap the shortcut to look up a word. Stop to close all floating windows.")
                 .setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "Stop", stop).build()).build()
             if (Build.VERSION.SDK_INT >= 34) startForeground(41, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(41, notification)
@@ -130,6 +140,36 @@ class OverlayService: Service() {
     private val panelColor get() = if (dark) Color.rgb(16, 26, 24) else Color.rgb(245, 241, 232)
     private val cardColor get() = if (dark) Color.rgb(24, 35, 33) else Color.rgb(255, 252, 245)
     private fun label(value: String, size: Float = 16f) = TextView(this).apply { text = value; textSize = size; setTextColor(inkColor); setPadding(dp(4), dp(5), dp(4), dp(5)); setLineSpacing(dp(2).toFloat(), 1.1f) }
+    private fun readingLabel(value: String, size: Float = 16f) = label(value, size * readingFont.scale).apply {
+        typeface = readingFace
+        textLocale = Locale.JAPANESE
+        includeFontPadding = false
+        val metrics = paint.fontMetricsInt
+        setLineSpacing(textSize * readingFont.lineHeight - (metrics.descent - metrics.ascent), 1f)
+    }
+    private fun panelWidth(large: Boolean) = minOf(resources.displayMetrics.widthPixels - dp(24), dp(if (large) 390 else 320))
+    private fun panelHeight(large: Boolean) = minOf((resources.displayMetrics.heightPixels * .68).toInt(), if (large) dp(560) else dp(196) + (maxOf(0f, resources.configuration.fontScale - 1f) * dp(64)).toInt())
+    private fun resizePanel(large: Boolean, animate: Boolean = true) {
+        val root = panel ?: return
+        val layout = panelParams ?: return
+        if (closing || destroyed) return
+        expanded = large
+        resizing?.cancel(); resizing = null
+        val width = panelWidth(large); val height = panelHeight(large)
+        val x = layout.x.coerceIn(0, maxOf(0, resources.displayMetrics.widthPixels - width))
+        val y = layout.y.coerceIn(0, maxOf(0, resources.displayMetrics.heightPixels - height - dp(32)))
+        if (layout.width == width && layout.height == height && layout.x == x && layout.y == y) return
+        val startWidth = layout.width; val startHeight = layout.height; val startX = layout.x; val startY = layout.y
+        fun update(progress: Float) {
+            if (panel !== root || closing || destroyed) return
+            layout.width = (startWidth + (width - startWidth) * progress).toInt()
+            layout.height = (startHeight + (height - startHeight) * progress).toInt()
+            layout.x = (startX + (x - startX) * progress).toInt(); layout.y = (startY + (y - startY) * progress).toInt()
+            try { windows.updateViewLayout(root, layout) } catch (_: IllegalArgumentException) {}
+        }
+        if (!animate || !ValueAnimator.areAnimatorsEnabled()) { update(1f); return }
+        resizing = ValueAnimator.ofFloat(0f, 1f).apply { duration = 240; interpolator = DecelerateInterpolator(); addUpdateListener { update(it.animatedValue as Float) }; start() }
+    }
     private fun iconButton(icon: Int, description: String, onAccent: Boolean = false, action: () -> Unit) = ImageButton(this).apply {
         setImageResource(icon)
         contentDescription = description
@@ -156,8 +196,8 @@ class OverlayService: Service() {
     }
     private fun showBubble() {
         if (bubble != null || hostVisible) return
-        val row = LinearLayout(this).apply { background = background(green, 28); elevation = dp(6).toFloat(); setPadding(dp(4), dp(4), dp(4), dp(4)) }
-        val open = iconButton(R.drawable.ic_lookup_search, "Open YomiPeek floating lookup", true) { showPanel("") }
+        val row = LinearLayout(this).apply { background = background(Color.rgb(40, 95, 83), 28); elevation = dp(6).toFloat(); setPadding(dp(4), dp(4), dp(4), dp(4)) }
+        val open = iconButton(R.drawable.yomipeek_icon, "Open YomiPeek floating lookup", true) { showPanel("") }.apply { imageTintList = null; setPadding(0, 0, 0, 0); scaleType = ImageView.ScaleType.FIT_CENTER; background = null }
         open.tooltipText = "Tap to search · hold to dismiss shortcut"
         open.setOnLongClickListener { setShortcut(this, false); stopSelf(); true }
         row.addView(open, LinearLayout.LayoutParams(dp(48), dp(48)))
@@ -175,17 +215,20 @@ class OverlayService: Service() {
         }
         sourceText = text
         if (panel != null) {
+            content?.removeAllViews(); resizePanel(false)
             query?.setText(if (text.length <= 64) text else "")
             renderSource()
             if (text.length > 64) chooseWord(0) else scheduleSearch()
             return
         }
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = background(panelColor); elevation = dp(16).toFloat(); setPadding(dp(10), dp(8), dp(10), dp(8)) }
-        val width = minOf(resources.displayMetrics.widthPixels - dp(24), dp(390))
-        val height = minOf((resources.displayMetrics.heightPixels * 0.68).toInt(), dp(560))
+        expanded = false
+        val width = panelWidth(false)
+        val height = panelHeight(false)
         val layout = params(width, height)
         panelParams = layout
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        header.addView(ImageView(this).apply { setImageResource(R.drawable.yomipeek_icon); scaleType = ImageView.ScaleType.FIT_CENTER }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(6) })
         backButton = iconButton(R.drawable.ic_lookup_back, "Back to previous word") {
             if (!browsingHistory.isEmpty()) { val previous = browsingHistory.removeLast(); sourceText = previous.second; query?.setText(previous.first); backButton?.visibility = if (browsingHistory.isEmpty()) View.GONE else View.VISIBLE }
         }
@@ -203,7 +246,7 @@ class OverlayService: Service() {
         root.addView(header)
         val inputRow = LinearLayout(this).apply { setPadding(0, dp(8), 0, dp(6)) }
         val edit = EditText(this).apply {
-            hint = "Look up a word…"; background = background(cardColor, 14); setPadding(dp(12), 0, dp(8), 0); setSingleLine(true); textSize = 16f; setTextColor(inkColor); setHintTextColor(if (dark) Color.LTGRAY else Color.DKGRAY)
+            hint = "Look up a word…"; background = background(cardColor, 14); setPadding(dp(12), 0, dp(8), 0); setSingleLine(true); textSize = 16f * readingFont.scale; typeface = readingFace; textLocale = Locale.JAPANESE; setTextColor(inkColor); setHintTextColor(if (dark) Color.LTGRAY else Color.DKGRAY)
             filters = arrayOf(InputFilter.LengthFilter(512)); imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
             setOnTouchListener { _, event -> if (event.action == MotionEvent.ACTION_DOWN) focusPanel(true); false }
             setOnEditorActionListener { _, action, _ -> if (action == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) { search(); bridge?.invokeMethod("remember", this.text.toString()); unfocusPanel(); true } else false }
@@ -258,7 +301,7 @@ class OverlayService: Service() {
         if (!ready || panel == null || destroyed) return
         val text = query?.text?.toString().orEmpty().trim()
         val request = ++generation
-        if (text.isEmpty()) { status?.text = "Enter a word, paste explicitly, or tap a character in selected text."; content?.removeAllViews(); renderSource(); return }
+        if (text.isEmpty()) { resizePanel(false); status?.text = "Enter a word, paste explicitly, or tap a character in selected text."; content?.removeAllViews(); renderSource(); return }
         status?.text = "Searching offline…"
         bridge?.invokeMethod("search", text, object: MethodChannel.Result {
             override fun success(result: Any?) {
@@ -267,8 +310,9 @@ class OverlayService: Service() {
                 val words = (result as? List<*>)?.mapNotNull { it as? Map<*, *> }.orEmpty()
                 status?.text = if (words.isEmpty()) "No results. Import/enable a dictionary or try a shorter word." else "${words.size} results · up to 30 shown"
                 words.forEach { renderWord(it) }
+                resizePanel(words.isNotEmpty())
             }
-            override fun error(code: String, message: String?, details: Any?) { if (request == generation) status?.text = "Could not read local dictionaries. Open the full app to retry." }
+            override fun error(code: String, message: String?, details: Any?) { if (request == generation) { content?.removeAllViews(); resizePanel(false); status?.text = "Could not read local dictionaries. Open the full app to retry." } }
             override fun notImplemented() { error("bridge", null, null) }
         })
     }
@@ -285,7 +329,7 @@ class OverlayService: Service() {
             text.setSpan(object: ClickableSpan() { override fun onClick(widget: View) { chooseWord(start) }; override fun updateDrawState(ds: TextPaint) { ds.color = green; ds.isUnderlineText = false } }, start, offset, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         target.addView(label("Selected text · tap a word's first character", 12f))
-        target.addView(label("", 18f).apply { tag = "source"; this.text = text; movementMethod = LinkMovementMethod.getInstance() })
+        target.addView(readingLabel("", 18f).apply { tag = "source"; this.text = text; movementMethod = LinkMovementMethod.getInstance() })
     }
     private fun chooseWord(offset: Int, sentence: String = sourceText) {
         if (!ready) return
@@ -322,13 +366,13 @@ class OverlayService: Service() {
                 }, start, offset, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        return label("", 16f).apply { this.text = text; movementMethod = LinkMovementMethod.getInstance() }
+        return readingLabel("", 16f).apply { this.text = text; movementMethod = LinkMovementMethod.getInstance() }
     }
     private fun renderWord(word: Map<*, *>) {
         val card = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(10), dp(10), dp(14)); background = background(cardColor, 12) }
         fun value(key: String) = word[key] as? String ?: ""
-        card.addView(label(value("expression"), 25f).apply { setTypeface(null, Typeface.BOLD) })
-        if (value("reading").isNotEmpty()) card.addView(label(value("reading"), 17f))
+        card.addView(readingLabel(value("expression"), 25f).apply { setTypeface(readingFace, Typeface.BOLD) })
+        if (value("reading").isNotEmpty()) card.addView(readingLabel(value("reading"), 17f))
         if (value("tags").isNotEmpty()) card.addView(label(value("tags"), 12f))
         if (value("inflection").isNotEmpty()) card.addView(label("Matched via ${value("inflection")}", 12f))
         card.addView(browsableLabel(value("definitions")))
@@ -386,7 +430,7 @@ class OverlayService: Service() {
     private fun closePanel() {
         if (closing) return
         val root = panel ?: return
-        closing = true; generation++
+        closing = true; generation++; resizing?.cancel(); resizing = null
         unfocusPanel()
         root.animate().cancel()
         root.animate().alpha(0f).translationY(dp(12).toFloat()).scaleX(.98f).scaleY(.98f).setDuration(140).setInterpolator(AccelerateInterpolator()).withEndAction {
@@ -402,8 +446,8 @@ class OverlayService: Service() {
         super.onConfigurationChanged(newConfig)
         rebuildAppearance()
         panel?.let { window -> panelParams?.let { layout ->
-            layout.width = minOf(resources.displayMetrics.widthPixels - dp(24), dp(390))
-            layout.height = minOf((resources.displayMetrics.heightPixels * 0.68).toInt(), dp(560))
+            layout.width = panelWidth(expanded)
+            layout.height = panelHeight(expanded)
             layout.x = layout.x.coerceIn(0, maxOf(0, resources.displayMetrics.widthPixels - layout.width))
             layout.y = layout.y.coerceIn(0, maxOf(0, resources.displayMetrics.heightPixels - layout.height - dp(32)))
             windows.updateViewLayout(window, layout)
@@ -418,7 +462,7 @@ class OverlayService: Service() {
         (getSystemService(APP_OPS_SERVICE) as AppOpsManager).stopWatchingMode(permissionChanges)
         getSharedPreferences("floating", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(appearanceChanges)
         if (active === this) active = null
-        destroyed = true; generation++; handler.removeCallbacksAndMessages(null)
+        destroyed = true; resizing?.cancel(); resizing = null; generation++; handler.removeCallbacksAndMessages(null)
         panel?.let { try { windows.removeView(it) } catch (_: IllegalArgumentException) {} }; panel = null
         bubble?.let { try { windows.removeView(it) } catch (_: IllegalArgumentException) {} }; bubble = null
         speech?.close(); speech = null

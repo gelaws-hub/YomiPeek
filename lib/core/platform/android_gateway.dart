@@ -66,6 +66,25 @@ class AndroidGateway {
     }
   }
 
+  Future<void> setTypography(Map<String, dynamic> value) async {
+    try {
+      await _channel.invokeMethod('setTypography', value);
+    } on MissingPluginException {
+      /* Non-Android host. */
+    }
+  }
+
+  Future<void> validateFont(String file) async {
+    try {
+      await _channel.invokeMethod('validateFont', file);
+    } on MissingPluginException {
+      /* Native validation is added on Android. */
+    }
+  }
+
+  Future<Map<String, dynamic>> typography() async =>
+      (await _channel.invokeMapMethod<String, dynamic>('typography')) ?? {};
+
   Future<void> permission() => _channel.invokeMethod('overlayPermission');
   Future<void> open(String text) => _channel.invokeMethod('openFloating', text);
   Future<void> shortcut(bool enabled) =>

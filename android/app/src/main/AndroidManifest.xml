@@ -7,7 +7,7 @@
         android:allowBackup="false"
         android:label="YomiPeek"
         android:name="${applicationName}"
-        android:icon="@drawable/yomipeek_icon">
+        android:icon="@mipmap/ic_launcher">
         <!-- Keep the supported Skia backend: API 37 x64 Impeller crashed on overlay-to-app resume. -->
         <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />
         <activity

@@ -1,6 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
-ThemeData readingTheme(Brightness brightness) {
+ThemeData readingTheme(
+  Brightness brightness, {
+  String? readingFamily,
+  double readingScale = 1,
+  double readingHeight = 1.6,
+}) {
   final dark = brightness == Brightness.dark;
   final scheme = ColorScheme.fromSeed(
     seedColor: const Color(0xff32685d),
@@ -11,6 +16,13 @@ ThemeData readingTheme(Brightness brightness) {
   );
   final base = ThemeData(useMaterial3: true, colorScheme: scheme);
   return base.copyWith(
+    extensions: [
+      ReadingTypography(
+        family: readingFamily,
+        scale: readingScale,
+        lineHeight: readingHeight,
+      ),
+    ],
     scaffoldBackgroundColor: dark
         ? const Color(0xff101a18)
         : const Color(0xfff5f1e8),
@@ -81,5 +93,47 @@ ThemeData readingTheme(Brightness brightness) {
       backgroundColor: scheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
     ),
+  );
+}
+
+class ReadingTypography extends ThemeExtension<ReadingTypography> {
+  const ReadingTypography({this.family, this.scale = 1, this.lineHeight = 1.6});
+  final String? family;
+  final double scale, lineHeight;
+  @override
+  ReadingTypography copyWith({
+    String? family,
+    double? scale,
+    double? lineHeight,
+  }) => ReadingTypography(
+    family: family ?? this.family,
+    scale: scale ?? this.scale,
+    lineHeight: lineHeight ?? this.lineHeight,
+  );
+  @override
+  ReadingTypography lerp(covariant ReadingTypography? other, double t) =>
+      other == null
+      ? this
+      : ReadingTypography(
+          family: t < .5 ? family : other.family,
+          scale: scale + (other.scale - scale) * t,
+          lineHeight: lineHeight + (other.lineHeight - lineHeight) * t,
+        );
+}
+
+TextStyle readingStyle(BuildContext context, [TextStyle? base]) {
+  final typography =
+      Theme.of(context).extension<ReadingTypography>() ??
+      const ReadingTypography();
+  final style =
+      base ??
+      Theme.of(context).textTheme.bodyLarge ??
+      const TextStyle(fontSize: 16);
+  return style.copyWith(
+    fontFamily: typography.family,
+    fontFamilyFallback: const ['YomiNotoSansJP'],
+    locale: const Locale('ja'),
+    fontSize: (style.fontSize ?? 16) * typography.scale,
+    height: typography.lineHeight,
   );
 }

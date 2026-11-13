@@ -47,6 +47,12 @@ internal class PlatformChannelHandler(private val activity: MainActivity, val ch
                         activity.getSharedPreferences("floating", android.content.Context.MODE_PRIVATE).edit().putString("theme", mode).apply()
                         result.success(null)
                     }
+                    "validateFont" -> { ReadingFonts.validate(activity, call.arguments as String); result.success(null) }
+                    "setTypography" -> { ReadingFonts.save(activity, call.arguments as Map<*, *>); result.success(null) }
+                    "typography" -> {
+                        val font = ReadingFonts.read(activity)
+                        result.success(mapOf("key" to font.key, "file" to font.file, "scale" to font.scale.toDouble(), "lineHeight" to font.lineHeight.toDouble()))
+                    }
                     "floatingState" -> {
                         val allowed = Settings.canDrawOverlays(activity)
                         android.util.Log.d("YomiPeek", "Overlay permission queried: $allowed")

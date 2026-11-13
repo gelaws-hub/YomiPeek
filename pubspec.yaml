@@ -69,6 +69,21 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - design/logo-final/yomipeek-icon-1024.png
+    - assets/fonts/noto-sans-jp/OFL.txt
+    - assets/fonts/noto-serif-jp/OFL.txt
+    - assets/fonts/zen-maru-gothic/OFL.txt
+  fonts:
+    - family: YomiNotoSansJP
+      fonts:
+        - asset: assets/fonts/noto-sans-jp/font.ttf
+    - family: YomiNotoSerifJP
+      fonts:
+        - asset: assets/fonts/noto-serif-jp/font.ttf
+    - family: YomiRoundedJP
+      fonts:
+        - asset: assets/fonts/zen-maru-gothic/font.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

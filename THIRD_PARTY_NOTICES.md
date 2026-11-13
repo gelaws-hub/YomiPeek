@@ -7,3 +7,6 @@ Development validation used the externally downloaded JMdict English Yomitan rel
 
 
 Further external development validation used the official JMdict English with examples and KANJIDIC English archives from the 2026-11-11 release. Original index attribution is retained and displayed by the application. Example sentences retain their respective contributor/source rights; the application license does not apply to imported example text. No third-party dictionary archive, generated dictionary database or asset is included in the application.
+
+
+Bundled reading presets use Noto Sans JP, Noto Serif JP and Zen Maru Gothic, redistributed unmodified under the SIL Open Font License 1.1. Complete notices are included alongside each font in `assets/fonts` and registered in the application's Open-source licenses. Source locations and file hashes are recorded in `assets/fonts/README.md`. User-imported fonts retain their own licenses and remain private on-device files. The final Kana Lens logo uses the supplied artwork from `design/logo-final`.

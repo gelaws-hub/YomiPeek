@@ -1,5 +1,9 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+import 'package:yomipeek/features/appearance/fonts.dart';
+import 'package:yomipeek/features/appearance/font_settings_page.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -214,6 +218,124 @@ void main() {
       await db.close();
       await user.close();
       await directory.delete(recursive: true);
+    },
+  );
+  testWidgets(
+    'Japanese presets and imported font survive preference reload and mirror to native popup',
+    (tester) async {
+      final root = await Directory(
+        '${(await getTemporaryDirectory()).path}/fonts-${DateTime.now().microsecondsSinceEpoch}',
+      ).create();
+      final db = DictionaryDb.file(File('${root.path}/dictionary.sqlite'));
+      final user = UserDb.file(File('${root.path}/user.sqlite'));
+      const channel = MethodChannel('org.yomipeek/platform');
+      final previous = await channel.invokeMapMethod<String, dynamic>(
+        'typography',
+      );
+      File? importedFile;
+      addTearDown(() async {
+        await channel.invokeMethod<void>(
+          'setTypography',
+          previous ?? {'key': 'system'},
+        );
+        if (importedFile != null && await importedFile.exists()) {
+          await importedFile!.delete();
+        }
+        await db.close();
+        await user.close();
+        await root.delete(recursive: true);
+      });
+      Widget screen() => ProviderScope(
+        overrides: [
+          repositoryProvider.overrideWithValue(DictionaryRepository(db, user)),
+        ],
+        child: const MaterialApp(home: FontSettingsPage()),
+      );
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      var container = ProviderScope.containerOf(
+        tester.element(find.byType(FontSettingsPage)),
+      );
+      await container
+          .read(japaneseFontsProvider.notifier)
+          .save(
+            container
+                .read(japaneseFontsProvider)
+                .copyWith(selected: 'mincho', scale: 1.1, lineHeight: 1.8),
+          );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('font-preview')))
+            .style!
+            .fontFamily,
+        'YomiNotoSerifJP',
+      );
+      expect(
+        (await container.read(androidProvider).typography())['key'],
+        'mincho',
+      );
+      final data = await rootBundle.load(
+        'assets/fonts/zen-maru-gothic/font.ttf',
+      );
+      final source = File('${root.path}/My Japanese.ttf');
+      await source.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      );
+      await container
+          .read(japaneseFontsProvider.notifier)
+          .importFont(source.path, 'My Japanese.ttf');
+      await source.delete();
+      final selected = container.read(japaneseFontsProvider);
+      importedFile = File(
+        '${(await container.read(japaneseFontsProvider.notifier).directory).path}/${selected.custom!.file}',
+      );
+      expect(await importedFile.exists(), true);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('font-preview')))
+            .style!
+            .fontFamily,
+        selected.family,
+      );
+      final broken = File('${root.path}/broken.ttf');
+      await broken.writeAsString('not a font');
+      await expectLater(
+        container
+            .read(japaneseFontsProvider.notifier)
+            .importFont(broken.path, 'broken.ttf'),
+        throwsA(isA<FontImportFailure>()),
+      );
+      expect(container.read(japaneseFontsProvider).selected, selected.selected);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      container = ProviderScope.containerOf(
+        tester.element(find.byType(FontSettingsPage)),
+      );
+      // A no-op frame wait lets the asynchronous preference restore and native acknowledgement finish.
+      for (
+        var i = 0;
+        i < 20 &&
+            container.read(japaneseFontsProvider).selected != selected.selected;
+        i++
+      ) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(container.read(japaneseFontsProvider).selected, selected.selected);
+      expect(container.read(japaneseFontsProvider).scale, 1.1);
+      final native = await container.read(androidProvider).typography();
+      expect(native['key'], selected.selected);
+      expect(native['lineHeight'], closeTo(1.8, .01));
+      await container
+          .read(japaneseFontsProvider.notifier)
+          .remove(selected.custom!);
+      expect(container.read(japaneseFontsProvider).selected, 'system');
+      expect(await importedFile.exists(), false);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
     },
   );
 }

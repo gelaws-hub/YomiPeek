@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -9,8 +12,24 @@ import 'features/dictionary/data/repository.dart';
 import 'app/app.dart';
 import 'features/floating_lookup/overlay_bridge.dart';
 
+bool _fontLicensesRegistered = false;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!_fontLicensesRegistered) {
+    _fontLicensesRegistered = true;
+    for (final entry in {
+      'Noto Sans JP': 'noto-sans-jp',
+      'Noto Serif JP': 'noto-serif-jp',
+      'Zen Maru Gothic': 'zen-maru-gothic',
+    }.entries) {
+      LicenseRegistry.addLicense(() async* {
+        yield LicenseEntryWithLineBreaks([
+          entry.key,
+        ], await rootBundle.loadString('assets/fonts/${entry.value}/OFL.txt'));
+      });
+    }
+  }
   try {
     final directory = await getApplicationSupportDirectory();
     final db = DictionaryDb.file(File('${directory.path}/dictionaries.sqlite'));

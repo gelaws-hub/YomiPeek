@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/app.dart';
+import '../../../app/design.dart';
 import '../../../core/database/database.dart';
 import '../../../core/platform/android_gateway.dart';
 import '../../floating_lookup/lookup_page.dart';
@@ -96,7 +97,13 @@ class _SentenceWordsState extends ConsumerState<SentenceWords> {
         children: [
           for (final word in words)
             ActionChip(
-              label: Text(word),
+              label: Text(
+                word,
+                style: readingStyle(
+                  context,
+                  Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
               onPressed: () => widget.onChoose(word),
               avatar: const Icon(Icons.north_east, size: 14),
             ),
@@ -125,7 +132,7 @@ class DictionaryContent extends StatelessWidget {
       if (!hasJapanese(text)) {
         return SelectableText(
           text,
-          style: Theme.of(context).textTheme.bodyLarge,
+          style: readingStyle(context, Theme.of(context).textTheme.bodyLarge),
         );
       }
       return InkWell(
@@ -135,12 +142,13 @@ class DictionaryContent extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Text(
             text,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              decoration: TextDecoration.underline,
-              decorationColor: Theme.of(context).colorScheme.primary
-                  .withValues(alpha: .3),
-            ),
+            style: readingStyle(context, Theme.of(context).textTheme.bodyLarge)
+                .copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Theme.of(context).colorScheme.primary
+                      .withValues(alpha: .3),
+                ),
           ),
         ),
       );
@@ -342,16 +350,22 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
                     const SizedBox(height: 18),
                     Text(
                       word.expression,
-                      style: Theme.of(context).textTheme.headlineLarge
-                          ?.copyWith(fontSize: 40),
+                      style: readingStyle(
+                        context,
+                        Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(fontSize: 40),
+                      ),
                     ),
                     Row(
                       children: [
                         Expanded(
                           child: Text(
                             word.reading,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(color: colors.primary),
+                            style: readingStyle(
+                              context,
+                              Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: colors.primary),
+                            ),
                           ),
                         ),
                         IconButton(
@@ -440,7 +454,10 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
                     ActionChip(
                       label: Text(
                         character,
-                        style: const TextStyle(fontSize: 22),
+                        style: readingStyle(
+                          context,
+                          const TextStyle(fontSize: 22),
+                        ),
                       ),
                       onPressed: () => openKanji(context, character),
                     ),
@@ -464,7 +481,13 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
                 for (final related in snapshot.data!.$3)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(related.term.expression),
+                    title: Text(
+                      related.term.expression,
+                      style: readingStyle(
+                        context,
+                        Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
                     subtitle: Text(
                       '${related.term.reading} · ${related.term.definitions}',
                       maxLines: 2,
@@ -577,7 +600,7 @@ class _SentenceStudioPageState extends State<SentenceStudioPage> {
       const SizedBox(height: 14),
       Text(
         'A sentence is the start of a small adventure. Tap a word, follow a reference, and find your way back.',
-        style: Theme.of(context).textTheme.bodyLarge,
+        style: readingStyle(context, Theme.of(context).textTheme.bodyLarge),
       ),
       const SizedBox(height: 28),
       TextField(
@@ -710,7 +733,7 @@ class ExtraDetails extends StatelessWidget {
             value is String || value is num
                 ? '$value'
                 : const JsonEncoder.withIndent('  ').convert(value),
-            style: Theme.of(context).textTheme.bodyLarge,
+            style: readingStyle(context, Theme.of(context).textTheme.bodyLarge),
           ),
         ],
       ),
@@ -787,7 +810,10 @@ class _KanjiExplorerPageState extends ConsumerState<KanjiExplorerPage> {
             borderRadius: BorderRadius.circular(24),
           ),
           child: Center(
-            child: Text(widget.character, style: const TextStyle(fontSize: 88)),
+            child: Text(
+              widget.character,
+              style: readingStyle(context, const TextStyle(fontSize: 88)),
+            ),
           ),
         ),
         const SectionHeading('Readings & meaning'),

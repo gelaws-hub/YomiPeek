@@ -51,3 +51,8 @@ The integration-test command includes `--no-uninstall` because this Flutter SDK 
 The Explore tab turns pasted Japanese into a dictionary browsing session. Follow suggested words, open a result for structured senses and examples, tap an example to discover its other words, and use Back to return through your exploration. Character chips open imported kanji readings and meanings. All browsing stays offline.
 
 The popup follows Settings → Appearance, including explicit light/dark overrides. Its shortcut is a single draggable search button; hold it to dismiss (or use notification Stop / Settings). It stays out of the way inside YomiPeek. The panel has separate expand and circular close controls and short entrance/exit transitions. See [browser validation](docs/testing.md) for screenshots and measured performance.
+
+
+Settings → Japanese typography offers offline Gothic (Noto Sans JP), Mincho (Noto Serif JP), Rounded (Zen Maru Gothic) and custom TTF/OTF imports, with reading size and line spacing. Imports are copied into private app storage and persist across restarts. The same font is used in dictionary entries, examples, characters and the native floating dictionary. Fonts that lack a character fall back to Japanese Gothic.
+
+The floating dictionary opens as a compact search panel, grows to its reading size when matches arrive, and shrinks on an empty or unmatched query. Growth is animated and kept within the screen. App, launcher, shortcut, popup and notification branding use the final Kana Lens artwork from `design/logo-final`.

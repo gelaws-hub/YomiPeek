@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app.dart';
+import '../../app/design.dart';
 import '../dictionary/data/repository.dart';
 import '../dictionary/search/selection.dart';
 import '../dictionary/explorer/explorer.dart';
@@ -137,6 +138,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
                 padding: const EdgeInsets.all(16),
                 child: TextField(
                   controller: controller,
+                  style: readingStyle(context, const TextStyle(fontSize: 18)),
                   maxLength: 512,
                   onChanged: search,
                   onSubmitted: (q) => search(q, remember: true),
@@ -208,7 +210,10 @@ class _LookupPageState extends ConsumerState<LookupPage> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Text(
               character,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: readingStyle(
+                context,
+                Theme.of(context).textTheme.titleLarge,
+              ),
             ),
           ),
         ),
