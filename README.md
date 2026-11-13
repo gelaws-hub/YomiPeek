@@ -31,7 +31,7 @@ flutter test integration_test/offline_dictionary_test.dart -d emulator-5554 --no
 
 Open Dictionaries using the books icon or Settings, then **Import ZIP files**. Pick one or more archives in the Android file picker. Reimport a different revision with the same title to replace an existing dictionary atomically. Submitted searches enter history; typing provides results after a short debounce. Higher dictionary priorities appear first within each match rank. Results are capped at 100; narrow the query to see others.
 
-Debug APK: `build/app/outputs/flutter-apk/app-debug.apk`. Release signing must be configured before publishing. Android 8.0/API 26 or later is the supported target; desktop/web are not configured.
+Debug APK: `build/app/outputs/flutter-apk/app-debug.apk`. GitHub Actions builds signed release APKs; see [releasing](RELEASING.md). Android 8.0/API 26 or later is the supported target; desktop/web are not configured.
 
 ## Scope
 
